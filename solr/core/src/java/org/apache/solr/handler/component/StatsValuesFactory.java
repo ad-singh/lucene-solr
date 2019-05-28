@@ -17,8 +17,17 @@
 package org.apache.solr.handler.component;
 
 import java.io.IOException;
-import java.util.*;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import com.google.common.hash.HashFunction;
+import com.tdunning.math.stats.AVLTreeDigest;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.queries.function.FunctionValues;
 import org.apache.lucene.queries.function.ValueSource;
@@ -28,11 +37,15 @@ import org.apache.solr.common.SolrException;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.handler.component.StatsField.Stat;
-import org.apache.solr.schema.*;
-
-import com.tdunning.math.stats.AVLTreeDigest;
-import com.google.common.hash.HashFunction;
-
+import org.apache.solr.schema.DatePointField;
+import org.apache.solr.schema.EnumField;
+import org.apache.solr.schema.FieldType;
+import org.apache.solr.schema.PointField;
+import org.apache.solr.schema.SchemaField;
+import org.apache.solr.schema.StrField;
+import org.apache.solr.schema.TrieDateField;
+import org.apache.solr.schema.TrieField;
+import org.apache.solr.search.RedisHelper;
 import org.apache.solr.util.hll.HLL;
 import org.apache.solr.util.hll.HLLType;
 
@@ -134,6 +147,8 @@ abstract class AbstractStatsValues<T> implements StatsValues {
    * called at least once
    */
   protected FunctionValues values;
+
+  protected Map<Integer,Double> valMap;
   
   protected T max;
   protected T min;
@@ -381,14 +396,17 @@ abstract class AbstractStatsValues<T> implements StatsValues {
    * {@inheritDoc}
    */
   public void setNextReader(LeafReaderContext ctx) throws IOException {
-    if (valueSource == null) {
-      // first time we've collected local values, get the right ValueSource
-      valueSource = (null == ft) 
-        ? statsField.getValueSource() 
-        : ft.getValueSource(sf, null);
-      vsContext = ValueSource.newContext(statsField.getSearcher());
+    valMap = RedisHelper.getInstance(statsField.getSearcher().getCore().getName()).getMap(statsField.getSchemaField().getName());
+    if(null == valMap){
+      if (valueSource == null) {
+        // first time we've collected local values, get the right ValueSource
+        valueSource = (null == ft)
+            ? statsField.getValueSource()
+            : ft.getValueSource(sf, null);
+        vsContext = ValueSource.newContext(statsField.getSearcher());
+      }
+      values = valueSource.getValues(vsContext, ctx);
     }
-    values = valueSource.getValues(vsContext, ctx);
   }
   
   /**
@@ -495,11 +513,20 @@ class NumericStatsValues extends AbstractStatsValues<Number> {
   
   @Override
   public void accumulate(int docID) {
-    if (values.exists(docID)) {
-      Number value = (Number) values.objectVal(docID);
-      accumulate(value, 1);
-    } else {
-      missing();
+    if(null!= valMap){
+      Double val = valMap.get(docID);
+      if(null !=val) {
+        accumulate(val, 1);
+      }else{
+        missing();
+      }
+    }else {
+      if (values.exists(docID)) {
+        Number value = (Number) values.objectVal(docID);
+        accumulate(value, 1);
+      } else {
+        missing();
+      }
     }
   }
   

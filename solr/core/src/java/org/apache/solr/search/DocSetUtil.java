@@ -19,6 +19,7 @@ package org.apache.solr.search;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.Fields;
@@ -34,6 +35,7 @@ import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.LeafCollector;
+import org.apache.lucene.search.LegacyNumericRangeQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.Bits;
@@ -144,9 +146,14 @@ public class DocSetUtil {
   // code to produce docsets for non-docsetproducer queries
   public static DocSet createDocSetGeneric(SolrIndexSearcher searcher, Query query) throws IOException {
 
+    if(query instanceof LegacyNumericRangeQuery ){
+      DocSet docSet = RedisHelper.getInstance(searcher.getCore().getName()).getDocSet((LegacyNumericRangeQuery) query);
+      if(null!= docSet){
+       return docSet;
+      }
+    }
     int maxDoc = searcher.getIndexReader().maxDoc();
     DocSetCollector collector = new DocSetCollector(maxDoc);
-
     // This may throw an ExitableDirectoryReader.ExitingReaderException
     // but we should not catch it here, as we don't know how this DocSet will be used (it could be negated before use) or cached.
     searcher.search(query, collector);
@@ -159,9 +166,13 @@ public class DocSetUtil {
     int maxDoc = searcher.getIndexReader().maxDoc();
     int smallSetSize = smallSetSize(maxDoc);
 
+    DocSet docSet = RedisHelper.getInstance(searcher.getCore().getName()).getDocSet(term);
+    if(docSet!=null){
+//      return DocSetUtil.getDocSet( createDocSetFromSet(docSet,maxDoc), searcher );
+      return docSet;
+    }
     String field = term.field();
     BytesRef termVal = term.bytes();
-
     int maxCount = 0;
     int firstReader = -1;
     List<LeafReaderContext> leaves = reader.leaves();
@@ -241,6 +252,26 @@ public class DocSetUtil {
       DocSet smallSet = toSmallSet( docSet );
       // assert equals(docSet, smallSet);
       return smallSet;
+    }
+
+    return docSet;
+  }
+
+  public static DocSet createDocSetFromSet(Set<Integer> doclist,int maxDoc)  {
+    long[] bits = new long[FixedBitSet.bits2words(maxDoc)];
+    int sz = 0;
+      if (doclist != null) {
+        for (Integer subId : doclist) {
+          bits[subId >> 6] |= (1L << subId);
+          sz++;
+        }
+      }
+
+    BitDocSet docSet = new BitDocSet( new FixedBitSet(bits, maxDoc), sz );
+
+    int smallSetSize = smallSetSize(maxDoc);
+    if (sz < smallSetSize) {
+      return toSmallSet( docSet );
     }
 
     return docSet;

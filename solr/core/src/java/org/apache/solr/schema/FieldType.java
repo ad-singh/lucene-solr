@@ -37,8 +37,8 @@ import org.apache.lucene.analysis.util.TokenFilterFactory;
 import org.apache.lucene.analysis.util.TokenizerFactory;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType.LegacyNumericType;
-import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.document.SortedSetDocValuesField;
+import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queries.function.ValueSource;
@@ -69,6 +69,7 @@ import org.apache.solr.common.util.StrUtils;
 import org.apache.solr.query.SolrRangeQuery;
 import org.apache.solr.response.TextResponseWriter;
 import org.apache.solr.search.QParser;
+import org.apache.solr.search.RedisHelper;
 import org.apache.solr.search.Sorting;
 import org.apache.solr.uninverting.UninvertingReader;
 import org.slf4j.Logger;
@@ -772,13 +773,17 @@ public abstract class FieldType extends FieldProperties {
    * 
    */
   public Query getFieldQuery(QParser parser, SchemaField field, String externalVal) {
-    BytesRefBuilder br = new BytesRefBuilder();
-    readableToIndexed(externalVal, br);
     if (field.hasDocValues() && !field.indexed()) {
       // match-only
       return getRangeQuery(parser, field, externalVal, externalVal, true, true);
     } else {
-      return new TermQuery(new Term(field.getName(), br));
+      if(null != parser && RedisHelper.getInstance(parser.getReq().getSearcher().getCore().getName()).hasData(field.getName())){
+        return new TermQuery(new Term(field.getName(),new BytesRef(externalVal)));
+      }else {
+        BytesRefBuilder br = new BytesRefBuilder();
+        readableToIndexed(externalVal, br);
+        return new TermQuery(new Term(field.getName(), br));
+      }
     }
   }
 

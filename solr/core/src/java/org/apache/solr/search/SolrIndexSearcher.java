@@ -810,6 +810,10 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable, SolrI
   // only handle positive (non negative) queries
   DocSet getPositiveDocSet(Query q) throws IOException {
     DocSet answer;
+    if(q instanceof TermQuery){
+      answer = RedisHelper.getInstance(getCore().getName()).getDocSet(((TermQuery) q).getTerm());
+      if(null != answer) return answer;
+    }
     if (filterCache != null) {
       answer = filterCache.get(q);
       if (answer != null) return answer;

@@ -147,7 +147,13 @@
     <dependency org="org.codehaus.janino" name="janino" rev="${/org.codehaus.janino/janino}" conf="compile"/>
     <dependency org="org.codehaus.janino" name="commons-compiler" rev="${/org.codehaus.janino/commons-compiler}" conf="compile"/>
     <dependency org="com.google.protobuf" name="protobuf-java" rev="${/com.google.protobuf/protobuf-java}" conf="compile"/>
+    <dependency org="redis.clients" name="jedis" rev="2.7.3"/>
+    <dependency org="io.lettuce" name="lettuce-core" rev="5.0.1.RELEASE"/>
+    <dependency org="io.netty" name="netty-all" rev="4.1.36.Final"/>
+    <dependency org="io.projectreactor" name="reactor-core" rev="3.1.1.RELEASE"/>
+    <!-- https://mvnrepository.com/artifact/org.reactivestreams/reactive-streams -->
+    <dependency org="org.reactivestreams" name="reactive-streams" rev="1.0.2"/>
 
-    <exclude org="*" ext="*" matcher="regexp" type="${ivy.exclude.types}"/> 
+    <exclude org="*" ext="*" matcher="regexp" type="${ivy.exclude.types}"/>
   </dependencies>
 </ivy-module>
