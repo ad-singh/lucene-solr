@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -28,7 +29,7 @@
 #SOLR_STOP_WAIT="180"
 
 # Increase Java Heap as needed to support your indexing / query needs
-#SOLR_HEAP="512m"
+SOLR_HEAP="4g"
 
 # Expert: If you want finer control over memory options, specify them directly
 # Comment out SOLR_HEAP if you are using this though, that takes precedence
