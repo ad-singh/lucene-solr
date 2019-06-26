@@ -44,6 +44,11 @@ public class FunctionValuesHelper {
       }
 
       @Override
+      public Object objectVal(int doc) {
+        return doubleVal(doc);
+      }
+
+      @Override
       public String toString(int i) {
         return "";
       }

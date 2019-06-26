@@ -41,7 +41,7 @@ public class ValueFetchValueSourceParserPrice extends ValueSourceParser {
 
     @Override
     public FunctionValues getValues(Map map, LeafReaderContext leafReaderContext) throws IOException {
-      return FunctionValuesHelper.getFunctionValues(((SolrIndexSearcher)map.get("searcher")).getCore().getName()," ");
+      return FunctionValuesHelper.getFunctionValues(((SolrIndexSearcher)map.get("searcher")).getCore().getName(),"salePrice");
     }
 
 
